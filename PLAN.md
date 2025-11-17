@@ -17,8 +17,8 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 1. [x] Familiarize with the existing code from the template repo
 2. [x] Delete template code
 3. [x] Implement basic Leaflet map
-4. [ ] Add player's location to map
-5. [ ] Project cells onto map
-6. [ ] Add numbers to cells
-7. [ ] Implement ability to stash cells in inventory
-8. [ ] Implement ability to combine cells of similar value
+4. [x] Add player's location to map
+5. [x] Project cells onto map
+6. [x] Add numbers to cells
+7. [x] Implement ability to stash cells in inventory
+8. [x] Implement ability to combine cells of similar value
