@@ -20,7 +20,7 @@ const CLASS_LOC = leaflet.latLng(
   -122.05703507501151,
 );
 const ZOOM = 19;
-const CELL_DEGREES = 1e-4;
+const CELL_DEGREES = 0.00015;
 const CELL_COUNT = 8;
 const CELL_SPAWN_RATE = 0.2;
 
@@ -45,21 +45,20 @@ const playerMarker = leaflet.marker(CLASS_LOC);
 playerMarker.addTo(map);
 
 function spawnCell(i: number, j: number) {
-  // Convert cell numbers into lat/lng bounds
+  //convert cell numbers into lat/lng bounds
   const origin = CLASS_LOC;
   const bounds = leaflet.latLngBounds([
     [origin.lat + i * CELL_DEGREES, origin.lng + j * CELL_DEGREES],
     [origin.lat + (i + 1) * CELL_DEGREES, origin.lng + (j + 1) * CELL_DEGREES],
   ]);
 
-  // Add a rectangle to the map to represent the cache
+  //add a rectangle to the map to represent the cell
   const rect = leaflet.rectangle(bounds);
   rect.addTo(map);
 
-  // Add a text label with a random number 1-4 at the center of the rectangle
+  //add a text label with a random number 1-4 at the center of the rectangle
   const center = bounds.getCenter();
   let cellValue = Math.floor(Math.random() * 4) + 1;
-
   const label = leaflet.marker(center, {
     icon: leaflet.divIcon({
       className: "cell-label",
@@ -70,6 +69,11 @@ function spawnCell(i: number, j: number) {
     }),
   });
   label.addTo(map);
+
+  /*
+   * When a tile is clicked and the inventory is 0, at the tile value to inventory and empty the tile value
+   * When a tile with the same value as the inventory's value is clicked, add the inventory value to the tile and empty the inventory
+   */
   label.on("click", () => {
     if (playerInventory == 0) {
       label.setIcon(leaflet.divIcon({
@@ -107,3 +111,39 @@ for (let i = -CELL_COUNT; i < CELL_COUNT; i++) {
     }
   }
 }
+
+function playerMovement(direction: string) {
+  const currentPos = playerMarker.getLatLng();
+  if (direction == "left") {
+    playerMarker.setLatLng([currentPos.lat, currentPos.lng - 0.00015]);
+  } else if (direction == "right") {
+    playerMarker.setLatLng([currentPos.lat, currentPos.lng + 0.00015]);
+  } else if (direction == "up") {
+    playerMarker.setLatLng([currentPos.lat + 0.00015, currentPos.lng]);
+  } else if (direction == "down") {
+    playerMarker.setLatLng([currentPos.lat - 0.00015, currentPos.lng]);
+  }
+}
+
+let direction: string = "";
+document.addEventListener("keydown", (e) => {
+  if (e.key == "a") {
+    //console.log("left");
+    direction = "left";
+  } else if (e.key == "d") {
+    direction = "right";
+  } else if (e.key == "s") {
+    direction = "down";
+  } else if (e.key == "w") {
+    direction = "up";
+  }
+});
+
+function update() {
+  //console.log(direction);
+  playerMovement(direction);
+  direction = "";
+  requestAnimationFrame(update);
+}
+//kickstart loop
+requestAnimationFrame(update);
