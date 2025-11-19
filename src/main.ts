@@ -41,7 +41,10 @@ leaflet
   })
   .addTo(map);
 
-const playerMarker = leaflet.marker(CLASS_LOC);
+const playerMarker = leaflet.marker(leaflet.latLng(
+  36.997936938057016 - CELL_DEGREES / 2,
+  -122.05703507501151 + CELL_DEGREES / 2,
+));
 playerMarker.addTo(map);
 
 function spawnCell(i: number, j: number) {
@@ -75,29 +78,38 @@ function spawnCell(i: number, j: number) {
    * When a tile with the same value as the inventory's value is clicked, add the inventory value to the tile and empty the inventory
    */
   label.on("click", () => {
-    if (playerInventory == 0) {
-      label.setIcon(leaflet.divIcon({
-        className: "cell-label",
-        html:
-          `<div style='font-size: 18px; font-weight: bold; color: black;'>0</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-      }));
-      playerInventory += cellValue;
-      cellValue = 0;
-      inventoryDiv.innerText = `Inventory: ${playerInventory}`;
-    } else if (playerInventory == cellValue) {
-      label.setIcon(leaflet.divIcon({
-        className: "cell-label",
-        html: `<div style='font-size: 18px; font-weight: bold; color: black;'>${
-          playerInventory + cellValue
-        }</div>`,
-        iconSize: [30, 30],
-        iconAnchor: [15, 15],
-      }));
-      cellValue += playerInventory;
-      playerInventory = 0;
-      inventoryDiv.innerText = `Inventory: ${playerInventory}`;
+    if (
+      center.lat == playerMarker.getLatLng().lat &&
+      center.lng == playerMarker.getLatLng().lng
+    ) {
+      console.log("clicked");
+      if (playerInventory == 0) {
+        label.setIcon(leaflet.divIcon({
+          className: "cell-label",
+          html:
+            `<div style='font-size: 18px; font-weight: bold; color: black;'>0</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        }));
+        playerInventory += cellValue;
+        cellValue = 0;
+        inventoryDiv.innerText = `Inventory: ${playerInventory}`;
+      } else if (playerInventory == cellValue) {
+        label.setIcon(leaflet.divIcon({
+          className: "cell-label",
+          html:
+            `<div style='font-size: 18px; font-weight: bold; color: black;'>${
+              playerInventory + cellValue
+            }</div>`,
+          iconSize: [30, 30],
+          iconAnchor: [15, 15],
+        }));
+        cellValue += playerInventory;
+        playerInventory = 0;
+        inventoryDiv.innerText = `Inventory: ${playerInventory}`;
+      }
+    } else {
+      console.log("too far away to interact");
     }
   });
 }
@@ -113,6 +125,7 @@ for (let i = -CELL_COUNT; i < CELL_COUNT; i++) {
 }
 
 function playerMovement(direction: string) {
+  //console.log("moving ", direction);
   const currentPos = playerMarker.getLatLng();
   if (direction == "left") {
     playerMarker.setLatLng([currentPos.lat, currentPos.lng - 0.00015]);

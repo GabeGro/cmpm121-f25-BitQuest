@@ -22,3 +22,10 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 6. [x] Add numbers to cells
 7. [x] Implement ability to stash cells in inventory
 8. [x] Implement ability to combine cells of similar value
+
+### D3.b
+
+1. [x] Implement cell-based player movement using WASD keys
+2. [ ] Player is only able to interact with nearby cells
+3. [ ] Cells are spawned when player moves to unpopulated area
+4. [ ] Cell's offscreen are deleted
