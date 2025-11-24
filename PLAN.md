@@ -32,7 +32,7 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 
 ### D3.c
 
-1. [ ] Create globally accessible `Map` to store the state of modified cells
-2. [ ] Update spawnCell function to check this `Map` before generating a new value
-3. [ ] Update interaction logic to save cell's new state to `Map` whenever it changes
-4. [ ] Fix farming exploit
+1. [x] Create globally accessible `Map` to store the state of modified cells
+2. [x] Update spawnCell function to check this `Map` before generating a new value
+3. [x] Update interaction logic to save cell's new state to `Map` whenever it changes
+4. [x] Fix farming exploit
