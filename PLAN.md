@@ -29,3 +29,10 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 2. [x] Player is only able to interact with nearby cells
 3. [x] Cells are spawned when player moves to unpopulated area
 4. [x] Cell's offscreen are deleted
+
+### D3.c
+
+1. [ ] Create globally accessible `Map` to store the state of modified cells
+2. [ ] Update spawnCell function to check this `Map` before generating a new value
+3. [ ] Update interaction logic to save cell's new state to `Map` whenever it changes
+4. [ ] Fix farming exploit
