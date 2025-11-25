@@ -6,7 +6,7 @@ import "./style.css";
 
 // --- Configuration ---
 const TILE_DEGREES = 1e-4; // Size of a grid cell
-const NEIGHBORHOOD_SIZE = 15; // How many cells away we can see
+const NEIGHBORHOOD_SIZE = 12; // How many cells away we can see
 const CACHE_SPAWN_PROBABILITY = 0.3; // Chance of a cell having a coin
 
 // --- UI Setup ---
@@ -31,6 +31,7 @@ controlsDiv.innerHTML = `
   <button id="south">⬇️ South</button>
   <button id="west">⬅️ West</button>
   <button id="east">➡️ East</button>
+  <button id="sensor">🌐 GPS</button>
   <button id="reset">🚮 Reset</button>
 `;
 document.body.append(controlsDiv);
@@ -91,10 +92,7 @@ playerMarker.bindTooltip("That's you!");
 const gridLayer = leaflet.layerGroup().addTo(map);
 
 // --- State Management ---
-
 const activeCells = new Map<string, leaflet.Layer>();
-
-// Memento: Modified cells. changed to 'let' to allow loading from storage
 let savedCells = new Map<string, number>();
 
 // --- Persistence (LocalStorage) ---
@@ -103,7 +101,6 @@ function saveGameState() {
   const state = {
     inventory: playerInventory,
     gridPos: playerGridPos,
-    // Maps cannot be directly stringified, so we convert to an array of entries
     savedCells: Array.from(savedCells.entries()),
   };
   localStorage.setItem("bitquest_state", JSON.stringify(state));
@@ -117,14 +114,10 @@ function loadGameState() {
     playerGridPos = state.gridPos;
     savedCells = new Map(state.savedCells);
 
-    // Update UI based on loaded state
     inventoryDiv.innerText = `Inventory: ${playerInventory}`;
 
-    // Update Map Position
-    const newBounds = cellToBounds(playerGridPos);
-    const newCenter = newBounds.getCenter();
-    playerMarker.setLatLng(newCenter);
-    map.panTo(newCenter);
+    // Update visual position based on loaded state
+    updatePlayerVisuals();
   }
 }
 
@@ -192,7 +185,7 @@ function spawnCell(cell: Cell) {
 
         if (changed) {
           inventoryDiv.innerText = `Inventory: ${playerInventory}`;
-          saveGameState(); // Auto-save on interaction
+          saveGameState();
         }
       } else {
         console.log("Too far to interact!");
@@ -225,12 +218,9 @@ function updateGrid() {
   }
 }
 
-// --- Movement System ---
-
-function movePlayer(dLat: number, dLng: number) {
-  playerGridPos.i += dLat;
-  playerGridPos.j += dLng;
-
+// --- Movement Facade ---
+// Updates marker, map center, grid, and saves state
+function updatePlayerVisuals() {
   const newBounds = cellToBounds(playerGridPos);
   const newCenter = newBounds.getCenter();
 
@@ -238,24 +228,37 @@ function movePlayer(dLat: number, dLng: number) {
   map.panTo(newCenter);
 
   updateGrid();
-  saveGameState(); // Auto-save on movement
+  saveGameState();
 }
+
+function movePlayerBy(dLat: number, dLng: number) {
+  playerGridPos.i += dLat;
+  playerGridPos.j += dLng;
+  updatePlayerVisuals();
+}
+
+function movePlayerTo(lat: number, lng: number) {
+  playerGridPos = latLngToCell(lat, lng);
+  updatePlayerVisuals();
+}
+
+// --- Event Listeners ---
 
 document.getElementById("north")!.addEventListener(
   "click",
-  () => movePlayer(1, 0),
+  () => movePlayerBy(1, 0),
 );
 document.getElementById("south")!.addEventListener(
   "click",
-  () => movePlayer(-1, 0),
+  () => movePlayerBy(-1, 0),
 );
 document.getElementById("west")!.addEventListener(
   "click",
-  () => movePlayer(0, -1),
+  () => movePlayerBy(0, -1),
 );
 document.getElementById("east")!.addEventListener(
   "click",
-  () => movePlayer(0, 1),
+  () => movePlayerBy(0, 1),
 );
 
 document.getElementById("reset")!.addEventListener("click", () => {
@@ -265,6 +268,41 @@ document.getElementById("reset")!.addEventListener("click", () => {
   }
 });
 
+// --- Geolocation Logic ---
+let watchId: number | null = null;
+
+document.getElementById("sensor")!.addEventListener("click", () => {
+  if (watchId === null) {
+    // Start Watching
+    if ("geolocation" in navigator) {
+      watchId = navigator.geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          movePlayerTo(latitude, longitude);
+
+          // Visual indication that GPS is active
+          document.getElementById("sensor")!.classList.add("active");
+          document.getElementById("sensor")!.innerText = "🌐 GPS ON";
+        },
+        (error) => {
+          console.error("Geolocation error:", error);
+          alert(
+            "Could not access location. Ensure you are on HTTPS or localhost.",
+          );
+        },
+      );
+    } else {
+      alert("Geolocation is not supported by your browser.");
+    }
+  } else {
+    // Stop Watching
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+    document.getElementById("sensor")!.classList.remove("active");
+    document.getElementById("sensor")!.innerText = "🌐 GPS";
+  }
+});
+
 // --- Startup ---
-loadGameState(); // Load save file before starting the game
+loadGameState();
 updateGrid();
