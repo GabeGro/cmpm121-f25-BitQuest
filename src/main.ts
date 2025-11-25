@@ -6,7 +6,7 @@ import "./style.css";
 
 // --- Configuration ---
 const TILE_DEGREES = 1e-4; // Size of a grid cell
-const NEIGHBORHOOD_SIZE = 8; // How many cells away we can see
+const NEIGHBORHOOD_SIZE = 15; // How many cells away we can see
 const CACHE_SPAWN_PROBABILITY = 0.3; // Chance of a cell having a coin
 
 // --- UI Setup ---
@@ -31,6 +31,7 @@ controlsDiv.innerHTML = `
   <button id="south">⬇️ South</button>
   <button id="west">⬅️ West</button>
   <button id="east">➡️ East</button>
+  <button id="reset">🚮 Reset</button>
 `;
 document.body.append(controlsDiv);
 
@@ -81,7 +82,7 @@ function cellToBounds(cell: Cell): leaflet.LatLngBounds {
 }
 
 // Track player location in Grid coordinates
-const playerGridPos = latLngToCell(START_LOC.lat, START_LOC.lng);
+let playerGridPos = latLngToCell(START_LOC.lat, START_LOC.lng);
 
 const playerMarker = leaflet.marker(START_LOC);
 playerMarker.addTo(map);
@@ -89,11 +90,43 @@ playerMarker.bindTooltip("That's you!");
 
 const gridLayer = leaflet.layerGroup().addTo(map);
 
-// Tracks what is currently visible on the map
+// --- State Management ---
+
 const activeCells = new Map<string, leaflet.Layer>();
 
-// Tracks cells we have modified
-const savedCells = new Map<string, number>();
+// Memento: Modified cells. changed to 'let' to allow loading from storage
+let savedCells = new Map<string, number>();
+
+// --- Persistence (LocalStorage) ---
+
+function saveGameState() {
+  const state = {
+    inventory: playerInventory,
+    gridPos: playerGridPos,
+    // Maps cannot be directly stringified, so we convert to an array of entries
+    savedCells: Array.from(savedCells.entries()),
+  };
+  localStorage.setItem("bitquest_state", JSON.stringify(state));
+}
+
+function loadGameState() {
+  const stateString = localStorage.getItem("bitquest_state");
+  if (stateString) {
+    const state = JSON.parse(stateString);
+    playerInventory = state.inventory;
+    playerGridPos = state.gridPos;
+    savedCells = new Map(state.savedCells);
+
+    // Update UI based on loaded state
+    inventoryDiv.innerText = `Inventory: ${playerInventory}`;
+
+    // Update Map Position
+    const newBounds = cellToBounds(playerGridPos);
+    const newCenter = newBounds.getCenter();
+    playerMarker.setLatLng(newCenter);
+    map.panTo(newCenter);
+  }
+}
 
 // --- Game Logic ---
 
@@ -104,12 +137,11 @@ function spawnCell(cell: Cell) {
   let cellValue: number = 0;
   let shouldSpawn = false;
 
-  // If we have visited this cell before, restore its state
+  // Restore from Memento OR generate procedurally
   if (savedCells.has(key)) {
     cellValue = savedCells.get(key)!;
     shouldSpawn = true;
-  } // Otherwise, use the Flyweight pattern (procedural generation)
-  else if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
+  } else if (luck([cell.i, cell.j].toString()) < CACHE_SPAWN_PROBABILITY) {
     const valHash = luck([cell.i, cell.j, "val"].toString());
     cellValue = Math.floor(valHash * 4) + 1;
     shouldSpawn = true;
@@ -122,49 +154,45 @@ function spawnCell(cell: Cell) {
       fillOpacity: 0.2,
     });
 
-    // Add visual representation
     rect.addTo(gridLayer);
     activeCells.set(key, rect);
 
-    // Permanent Tooltip
     rect.bindTooltip(`${cellValue}`, {
       permanent: true,
       direction: "center",
       className: "cell-label",
     });
 
-    // Styling for empty cells (if restoring a 0)
     if (cellValue === 0) {
       rect.setStyle({ color: "gray", fillOpacity: 0.1 });
     }
 
-    // Interaction Logic
     rect.on("click", () => {
       const distI = Math.abs(playerGridPos.i - cell.i);
       const distJ = Math.abs(playerGridPos.j - cell.j);
 
       if (distI === 0 && distJ === 0) {
+        let changed = false;
         if (playerInventory === 0) {
-          // Collect
           playerInventory += cellValue;
           cellValue = 0;
+          changed = true;
 
-          // --- SAVE STATE ---
           savedCells.set(key, cellValue);
-
-          inventoryDiv.innerText = `Inventory: ${playerInventory}`;
           rect.setStyle({ color: "gray", fillOpacity: 0.1 });
           rect.setTooltipContent(`${cellValue}`);
         } else if (playerInventory === cellValue) {
-          // Deposit/Merge
           cellValue += playerInventory;
           playerInventory = 0;
+          changed = true;
 
-          // --- SAVE STATE ---
           savedCells.set(key, cellValue);
-
-          inventoryDiv.innerText = `Inventory: ${playerInventory}`;
           rect.setTooltipContent(`${cellValue}`);
+        }
+
+        if (changed) {
+          inventoryDiv.innerText = `Inventory: ${playerInventory}`;
+          saveGameState(); // Auto-save on interaction
         }
       } else {
         console.log("Too far to interact!");
@@ -179,7 +207,6 @@ function updateGrid() {
   const startJ = playerGridPos.j - NEIGHBORHOOD_SIZE;
   const endJ = playerGridPos.j + NEIGHBORHOOD_SIZE;
 
-  // Remove cells that have gone out of range
   for (const [key, layer] of activeCells) {
     const [i, j] = key.split(",").map(Number);
     if (i < startI || i > endI || j < startJ || j > endJ) {
@@ -188,7 +215,6 @@ function updateGrid() {
     }
   }
 
-  // Spawn new cells
   for (let i = startI; i <= endI; i++) {
     for (let j = startJ; j <= endJ; j++) {
       const key = `${i},${j}`;
@@ -212,6 +238,7 @@ function movePlayer(dLat: number, dLng: number) {
   map.panTo(newCenter);
 
   updateGrid();
+  saveGameState(); // Auto-save on movement
 }
 
 document.getElementById("north")!.addEventListener(
@@ -231,5 +258,13 @@ document.getElementById("east")!.addEventListener(
   () => movePlayer(0, 1),
 );
 
-// Initial Draw
+document.getElementById("reset")!.addEventListener("click", () => {
+  if (confirm("Are you sure you want to erase your save and restart?")) {
+    localStorage.removeItem("bitquest_state");
+    location.reload();
+  }
+});
+
+// --- Startup ---
+loadGameState(); // Load save file before starting the game
 updateGrid();
