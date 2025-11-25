@@ -39,6 +39,6 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 
 ### D3.d
 
-1. [ ] Create a function to serialize the player's inventory, the player's position, and the edited cells Map to a JSON string
-2. [ ] Be able to track the user's device's latitude/longitude
-3. [ ] Refactor movement logic so the game doesn't care if the update came from a button or a satellite
+1. [x] Create a function to serialize the player's inventory, the player's position, and the edited cells Map to a JSON string
+2. [x] Be able to track the user's device's latitude/longitude
+3. [x] Refactor movement logic so the game doesn't care if the update came from a button or a satellite
