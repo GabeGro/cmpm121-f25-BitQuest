@@ -36,3 +36,9 @@ The gameplay takes place on a map of the campus, with minimalistic cells about t
 2. [x] Update spawnCell function to check this `Map` before generating a new value
 3. [x] Update interaction logic to save cell's new state to `Map` whenever it changes
 4. [x] Fix farming exploit
+
+### D3.d
+
+1. [ ] Create a function to serialize the player's inventory, the player's position, and the edited cells Map to a JSON string
+2. [ ] Be able to track the user's device's latitude/longitude
+3. [ ] Refactor movement logic so the game doesn't care if the update came from a button or a satellite
